@@ -5,15 +5,24 @@
 
 预览效果：https://malinkang.notion.site/malinkang/534a7684b30e4a879269313f437f2185
 
+我还开发了一个多邻国同步到Notion的项目，预览效果：https://duolingo.malinkang.com/
 
+感兴趣可以来购买: https://item.taobao.com/item.htm?_u=29sg85ld059&id=770962681887&spm=a1z09.8149145.0.0.a39a2b58RAfnBk
 
 ## 使用
 
-weread2notion使用文档：https://malinkang.com/posts/weread2notion/
+> [!IMPORTANT]  
+> 关注公众号获取教程
 
-热力图使用文档：https://malinkang.com/posts/github_heatmap/
+![扫码_搜索联合传播样式-标准色版](https://github.com/malinkang/weread2notion/assets/3365208/191900c6-958e-4f9b-908d-a40a54889b5e)
 
-weread2notion-pro使用文档：https://malinkang.com/posts/weread2notion-pro/
+
+
+## 群
+> [!IMPORTANT]  
+> 欢迎加入微信群讨论。可以讨论使用中遇到的任何问题，也可以讨论Notion使用，后续我也会在群中分享更多Notion自动化工具。
+
+![WechatIMG53](https://github.com/malinkang/weread2notion-pro/assets/3365208/351f05cb-a3e7-4bfd-8602-26f81d111388)
 
 
 ## 捐赠
