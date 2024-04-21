@@ -2,25 +2,16 @@ import logging
 import os
 import re
 import time
+from datetime import timedelta
 
+from dotenv import load_dotenv
 from notion_client import Client
 from retrying import retry
-from datetime import timedelta
-from dotenv import load_dotenv
-from utils import (
-    format_date,
-    get_date,
-    get_first_and_last_day_of_month,
-    get_first_and_last_day_of_week,
-    get_first_and_last_day_of_year,
-    get_icon,
-    get_number,
-    get_relation,
-    get_rich_text,
-    get_title,
-    timestamp_to_date,
-    get_property_value,
-)
+from utils import (format_date, get_date, get_first_and_last_day_of_month,
+                   get_first_and_last_day_of_week,
+                   get_first_and_last_day_of_year, get_icon, get_number,
+                   get_property_value, get_relation, get_rich_text, get_title,
+                   timestamp_to_date)
 
 load_dotenv()
 TAG_ICON_URL = "https://www.notion.so/icons/tag_gray.svg"
@@ -39,9 +30,10 @@ class NotionHelper:
         "MONTH_DATABASE_NAME": "月",
         "YEAR_DATABASE_NAME": "年",
         "CATEGORY_DATABASE_NAME": "分类",
+        "GROUP_DATABASE_NAME": "分组",
         "AUTHOR_DATABASE_NAME": "作者",
         "CHAPTER_DATABASE_NAME": "章节",
-        "READ_DATABASE_NAME": "阅读记录",
+        "READ_DATABASE_NAME": "明细",
     }
     database_id_dict = {}
     image_dict = {}
@@ -77,6 +69,9 @@ class NotionHelper:
         )
         self.category_database_id = self.database_id_dict.get(
             self.database_name_dict.get("CATEGORY_DATABASE_NAME")
+        )
+        self.group_database_id = self.database_id_dict.get(
+            self.database_name_dict.get("GROUP_DATABASE_NAME")
         )
         self.author_database_id = self.database_id_dict.get(
             self.database_name_dict.get("AUTHOR_DATABASE_NAME")
@@ -127,15 +122,15 @@ class NotionHelper:
         properties = response.get("properties")
         update_properties = {}
         if (
-            properties.get("阅读时长") is None
-            or properties.get("阅读时长").get("type") != "number"
+            properties.get("rawReadingTime") is None
+            or properties.get("rawReadingTime").get("type") != "number"
         ):
-            update_properties["阅读时长"] = {"number": {}}
-        if (
-            properties.get("书架分类") is None
-            or properties.get("书架分类").get("type") != "select"
-        ):
-            update_properties["书架分类"] = {"select": {}}
+            update_properties["rawReadingTime"] = {"number": {}}
+        # if (
+        #     properties.get("书架分类") is None
+        #     or properties.get("书架分类").get("type") != "select"
+        # ):
+        #     update_properties["书架分类"] = {"select": {}}
         if (
             properties.get("豆瓣链接") is None
             or properties.get("豆瓣链接").get("type") != "url"
@@ -171,7 +166,7 @@ class NotionHelper:
             "时长": {"number": {}},
             "时间戳": {"number": {}},
             "日期": {"date": {}},
-            "书架": {"relation": {
+            "书籍": {"relation": {
                 "database_id":self.book_database_id,
                 "single_property": {},
             }},
@@ -259,6 +254,9 @@ class NotionHelper:
             page_id = response.get("results")[0].get("id")
         self.__cache[key] = page_id
         return page_id
+
+    def get_relation_name(self, id):
+        return self.client.pages.retrieve(id).get("properties").get("标题")
 
     def insert_bookmark(self, id, bookmark):
         icon = get_icon(BOOKMARK_ICON_URL)
@@ -374,15 +372,18 @@ class NotionHelper:
         results = self.query_all(self.book_database_id)
         books_dict = {}
         for result in results:
+            ## 如果没有分组，就跳过(书架中已删除的书籍)
+            relation = result.get("properties").get("分组").get("relation")
+                
             bookId = get_property_value(result.get("properties").get("BookId"))
             books_dict[bookId] = {
                 "pageId": result.get("id"),
                 "readingTime": get_property_value(
-                    result.get("properties").get("阅读时长")
+                    result.get("properties").get("rawReadingTime")
                 ),
                 "category": get_property_value(
-                    result.get("properties").get("书架分类")
-                ),
+                    self.get_relation_name(result.get("properties").get("分组").get("relation")[0].get("id"))
+                ) if relation else None,
                 "Sort": get_property_value(result.get("properties").get("Sort")),
                 "douban_url": get_property_value(
                     result.get("properties").get("豆瓣链接")

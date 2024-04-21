@@ -1,15 +1,12 @@
-import argparse
-from datetime import datetime
-from datetime import timedelta
-import json
 import os
-import time
+from datetime import datetime, timedelta
 
 import pendulum
-
 from notion_helper import NotionHelper
+from utils import (format_date, get_date, get_icon, get_number, get_relation,
+                   get_title, upload_image)
 from weread_api import WeReadApi
-from utils import format_date, get_date, get_icon, get_number, get_relation, get_title,upload_image
+
 
 def insert_to_notion(page_id,timestamp,duration):
     parent = {"database_id": notion_helper.day_database_id, "type": "database_id"}

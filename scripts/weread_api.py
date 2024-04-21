@@ -1,12 +1,12 @@
 import hashlib
-from http.cookies import SimpleCookie
 import os
 import re
+from http.cookies import SimpleCookie
 
 import requests
 from requests.utils import cookiejar_from_dict
-from http.cookies import SimpleCookie
 from retrying import retry
+
 WEREAD_URL = "https://weread.qq.com/"
 WEREAD_NOTEBOOKS_URL = "https://i.weread.qq.com/user/notebooks"
 WEREAD_BOOKMARKLIST_URL = "https://i.weread.qq.com/book/bookmarklist"
@@ -214,5 +214,6 @@ class WeReadApi:
         md5.update(result.encode("utf-8"))
         result += md5.hexdigest()[0:3]
         return result
+
     def get_url(self,book_id):
         return f"https://weread.qq.com/web/reader/{self.calculate_book_str_id(book_id)}"

@@ -1,15 +1,12 @@
-import argparse
-from datetime import datetime, timedelta
 import os
 
 import pendulum
 import requests
-from notion_helper import NotionHelper
-
-from weread_api import WeReadApi
 import utils
 from config import book_properties_type_dict, tz
+from notion_helper import NotionHelper
 from retrying import retry
+from weread_api import WeReadApi
 
 TAG_ICON_URL = "https://www.notion.so/icons/tag_gray.svg"
 USER_ICON_URL = "https://www.notion.so/icons/user-circle-filled_gray.svg"
@@ -44,8 +41,6 @@ def get_douban_url(isbn):
 def insert_book_to_notion(books, index, bookId):
     """插入Book到Notion"""
     book = {}
-    if bookId in archive_dict:
-        book["书架分类"] = archive_dict.get(bookId)
     if bookId in notion_books:
         book.update(notion_books.get(bookId))
     bookInfo = weread_api.get_bookinfo(bookId)
@@ -66,7 +61,7 @@ def insert_book_to_notion(books, index, bookId):
     elif book.get("readingTime", 0) >= 60:
         status = "在读"
     book["阅读状态"] = status
-    book["阅读时长"] = book.get("readingTime")
+    book["rawReadingTime"] = book.get("readingTime")
     book["阅读天数"] = book.get("totalReadDay")
     book["评分"] = book.get("newRating")
     if book.get("newRatingDetail") and book.get("newRatingDetail").get("myRating"):
@@ -110,6 +105,16 @@ def insert_book_to_notion(books, index, bookId):
                 )
                 for x in book.get("categories")
             ]
+    # book["作者"] = [
+    #     notion_helper.get_relation_id(
+    #         x, notion_helper.author_database_id, USER_ICON_URL
+    #     )
+    #     for x in book.get("author").split(" ")
+    # ]
+    if bookId in archive_dict:
+        book["分组"] = [notion_helper.get_relation_id(
+                archive_dict.get(bookId), notion_helper.group_database_id, TAG_ICON_URL 
+            )]
     properties = utils.get_properties(book, book_properties_type_dict)
     if book.get("时间"):
         notion_helper.get_date_relation(
@@ -141,7 +146,7 @@ def insert_book_to_notion(books, index, bookId):
 
 def insert_read_data(page_id, readTimes):
     readTimes = dict(sorted(readTimes.items()))
-    filter = {"property": "书架", "relation": {"contains": page_id}}
+    filter = {"property": "书籍", "relation": {"contains": page_id}}
     results = notion_helper.query_all_by_book(notion_helper.read_database_id, filter)
     for result in results:
         timestamp = result.get("properties").get("时间戳").get("number")
@@ -173,7 +178,7 @@ def insert_to_notion(page_id, timestamp, duration, book_database_id):
         ),
         "时长": utils.get_number(duration),
         "时间戳": utils.get_number(timestamp),
-        "书架": utils.get_relation([book_database_id]),
+        "书籍": utils.get_relation([book_database_id]),
     }
     if page_id != None:
         notion_helper.client.pages.update(page_id=page_id, properties=properties)
@@ -186,12 +191,14 @@ def insert_to_notion(page_id, timestamp, duration, book_database_id):
 
 
 if __name__ == "__main__":
-    weread_api = WeReadApi()
     notion_helper = NotionHelper()
     notion_books = notion_helper.get_all_book()
+
+    weread_api = WeReadApi()
     bookshelf_books = weread_api.get_bookshelf()
     bookProgress = bookshelf_books.get("bookProgress")
     bookProgress = {book.get("bookId"): book for book in bookProgress}
+
     archive_dict = {}
     for archive in bookshelf_books.get("archive"):
         name = archive.get("name")
