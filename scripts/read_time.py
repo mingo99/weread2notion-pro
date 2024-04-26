@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pendulum
 from notion_helper import NotionHelper
 from utils import (format_date, get_date, get_icon, get_number, get_relation,
-                   get_title, upload_image)
+                   get_title, upload_heatmap, upload_image)
 from weread_api import WeReadApi
 
 
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     weread_api = WeReadApi()
     image_file = get_file()
     if image_file:
-        image_url = upload_image(f"heatmap/{os.getenv('REPOSITORY').split('/')[0]}",image_file,f"./OUT_FOLDER/{image_file}")
+        image_url = upload_heatmap(image_file)
         block_id = os.getenv("HEATMAP_BLOCK_ID")
         if block_id == None or block_id.strip() == "":
             block_id = notion_helper.image_dict.get("id")

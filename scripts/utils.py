@@ -1,23 +1,16 @@
+import base64
 import calendar
-from datetime import datetime
-from datetime import timedelta
 import hashlib
 import os
 import re
-import requests
-import base64
-from config import (
-    RICH_TEXT,
-    URL,
-    RELATION,
-    NUMBER,
-    DATE,
-    FILES,
-    STATUS,
-    TITLE,
-    SELECT,
-)
+from datetime import datetime, timedelta
+
 import pendulum
+import requests
+from config import (DATE, FILES, NUMBER, RELATION, RICH_TEXT, SELECT, STATUS,
+                    TITLE, URL)
+from github import Auth, Github
+from requests.models import ReadTimeoutError
 
 MAX_LENGTH = (
     1024  # NOTION 2000个字符限制https://developers.notion.com/reference/request-limits
@@ -357,6 +350,36 @@ def upload_image(folder_path, filename,file_path):
         return response.text
     else:
         return None
+
+def upload_heatmap(image_name):
+    token = os.getenv("GH_TOKEN")
+    if token is None:
+        raise ValueError("Secret 'GH_TOKEN' is not set.")
+
+    picbed_repo = os.getenv("PICBED")
+    if picbed_repo is None:
+        raise ValueError("Secret 'PICBED' is not set.")
+
+    heatmap_folder = os.getenv("HEATMAP_FOLDER")
+    if heatmap_folder is None:
+        raise ValueError("Secret 'HEATMAP_FOLDER' is not set.")
+
+    remote_path = f"{heatmap_folder}/{image_name}"
+    local_path = f"./OUT_FOLDER/{image_name}"
+
+    auth = Auth.Token(token)
+    gh = Github(auth=auth)
+    repo = gh.get_repo(picbed_repo)
+
+    heatmap = open(local_path, "rb")
+    try:
+        content = repo.get_contents(heatmap_folder)
+        repo.delete_file(content[0].path, "Delete image", content[0].sha)
+        repo.create_file(remote_path, "Update image", heatmap.read())
+    except:
+        repo.create_file(remote_path, "Upload image", heatmap.read())
+
+    return f"https://fastly.jsdelivr.net/gh/{os.getenv('PICBED')}/{remote_path}"
 
 def url_to_md5(url):
     # 创建一个md5哈希对象

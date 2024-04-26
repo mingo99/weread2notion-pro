@@ -28,9 +28,12 @@ jobs:
       WEEK_DATABASE_NAME: ${{ vars.WEEK_DATABASE_NAME }}
       MONTH_DATABASE_NAME: ${{ vars.MONTH_DATABASE_NAME }}
       DAY_DATABASE_NAME: ${{ vars.DAY_DATABASE_NAME }}
+      YEAR: ${{ vars.YEAR }}
       REF: ${{ github.ref }}
       REPOSITORY: ${{ github.repository }}
-      YEAR: ${{ vars.YEAR }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      PICBED: ${{ secrets.PICBED }}
+      HEATMAP_FOLDER: ${{ secrets.HEATMAP_FOLDER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
