@@ -1,5 +1,3 @@
-import os
-
 import pendulum
 import requests
 import utils
@@ -105,16 +103,12 @@ def insert_book_to_notion(books, index, bookId):
                 )
                 for x in book.get("categories")
             ]
-    # book["作者"] = [
-    #     notion_helper.get_relation_id(
-    #         x, notion_helper.author_database_id, USER_ICON_URL
-    #     )
-    #     for x in book.get("author").split(" ")
-    # ]
     if bookId in archive_dict:
-        book["分组"] = [notion_helper.get_relation_id(
-                archive_dict.get(bookId), notion_helper.group_database_id, TAG_ICON_URL 
-            )]
+        book["分组"] = [
+            notion_helper.get_relation_id(
+                archive_dict.get(bookId), notion_helper.group_database_id, TAG_ICON_URL
+            )
+        ]
     properties = utils.get_properties(book, book_properties_type_dict)
     if book.get("时间"):
         notion_helper.get_date_relation(
@@ -166,26 +160,29 @@ def insert_read_data(page_id, readTimes):
 
 
 def insert_to_notion(page_id, timestamp, duration, book_database_id):
+    date = pendulum.from_timestamp(timestamp, tz=tz)
     parent = {"database_id": notion_helper.read_database_id, "type": "database_id"}
     properties = {
         "标题": utils.get_title(
-            pendulum.from_timestamp(timestamp, tz=tz).to_date_string()
+            date.to_date_string()
         ),
         "日期": utils.get_date(
-            start=pendulum.from_timestamp(timestamp, tz=tz).format(
+            start=date.format(
                 "YYYY-MM-DD HH:mm:ss"
             )
         ),
         "时长": utils.get_number(duration),
         "时间戳": utils.get_number(timestamp),
         "书籍": utils.get_relation([book_database_id]),
+        "日": utils.get_relation([notion_helper.get_day_relation_id(date)]),
     }
+    icon_url = utils.get_wolai_icon_url(date.format("YYYY-MM-DD"),"D")
     if page_id != None:
         notion_helper.client.pages.update(page_id=page_id, properties=properties)
     else:
         notion_helper.client.pages.create(
             parent=parent,
-            icon=utils.get_icon("https://www.notion.so/icons/target_red.svg"),
+            icon=utils.get_icon(icon_url),
             properties=properties,
         )
 

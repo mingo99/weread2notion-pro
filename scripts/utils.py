@@ -10,7 +10,6 @@ import requests
 from config import (DATE, FILES, NUMBER, RELATION, RICH_TEXT, SELECT, STATUS,
                     TITLE, URL)
 from github import Auth, Github
-from requests.models import ReadTimeoutError
 
 MAX_LENGTH = (
     1024  # NOTION 2000个字符限制https://developers.notion.com/reference/request-limits
@@ -79,6 +78,17 @@ def get_date(start, end=None):
         }
     }
 
+def get_wolai_icon_url(date,icon_type,color="blue"):
+    if icon_type == "Y":
+        type_code = 5
+    elif icon_type == "M":
+        type_code = 4
+    elif icon_type == "W":
+        type_code = 10
+    else:
+        type_code = 1
+
+    return f"https://api.wolai.com/v1/icon?type={type_code}&locale=cn&date={date}&color={color}"
 
 def get_icon(url):
     return {"type": "external", "external": {"url": url}}
@@ -219,22 +229,22 @@ def get_properties(dict1, dict2):
         property = None
         if type == TITLE:
             property = {
-                "title": [
-                    {"type": "text", "text": {"content": value[:MAX_LENGTH]}}
-                ]
+                "title": [{"type": "text", "text": {"content": value[:MAX_LENGTH]}}]
             }
         elif type == RICH_TEXT:
             property = {
-                "rich_text": [
-                    {"type": "text", "text": {"content": value[:MAX_LENGTH]}}
-                ]
+                "rich_text": [{"type": "text", "text": {"content": value[:MAX_LENGTH]}}]
             }
         elif type == NUMBER:
             property = {"number": value}
         elif type == STATUS:
             property = {"status": {"name": value}}
         elif type == FILES:
-            property = {"files": [{"type": "external", "name": "Cover", "external": {"url": value}}]}
+            property = {
+                "files": [
+                    {"type": "external", "name": "Cover", "external": {"url": value}}
+                ]
+            }
         elif type == DATE:
             property = {
                 "date": {
@@ -244,9 +254,9 @@ def get_properties(dict1, dict2):
                     "time_zone": "Asia/Shanghai",
                 }
             }
-        elif type==URL:
-            property = {"url": value}        
-        elif type==SELECT:
+        elif type == URL:
+            property = {"url": value}
+        elif type == SELECT:
             property = {"select": {"name": value}}
         elif type == RELATION:
             property = {"relation": [{"id": id} for id in value]}
@@ -262,7 +272,7 @@ def get_property_value(property):
     if content is None:
         return None
     if type == "title" or type == "rich_text":
-        if(len(content)>0):
+        if len(content) > 0:
             return content[0].get("plain_text")
         else:
             return None
@@ -305,6 +315,7 @@ def calculate_book_str_id(book_id):
     result += md5.hexdigest()[0:3]
     return result
 
+
 def transform_id(book_id):
     id_length = len(book_id)
     if re.match("^\d*$", book_id):
@@ -318,8 +329,10 @@ def transform_id(book_id):
         result += format(ord(book_id[i]), "x")
     return "4", [result]
 
+
 def get_weread_url(book_id):
     return f"https://weread.qq.com/web/reader/{calculate_book_str_id(book_id)}"
+
 
 def str_to_timestamp(date):
     if date == None:
@@ -328,28 +341,26 @@ def str_to_timestamp(date):
     # 获取时间戳
     return int(dt.timestamp())
 
-upload_url = 'https://wereadassets.malinkang.com/'
+
+upload_url = "https://wereadassets.malinkang.com/"
 
 
-def upload_image(folder_path, filename,file_path):
+def upload_image(folder_path, filename, file_path):
     # 将文件内容编码为Base64
-    with open(file_path, 'rb') as file:
-        content_base64 = base64.b64encode(file.read()).decode('utf-8')
+    with open(file_path, "rb") as file:
+        content_base64 = base64.b64encode(file.read()).decode("utf-8")
 
     # 构建请求的JSON数据
-    data = {
-        'file': content_base64,
-        'filename': filename,
-        'folder': folder_path
-    }
+    data = {"file": content_base64, "filename": filename, "folder": folder_path}
 
     response = requests.post(upload_url, json=data)
 
     if response.status_code == 200:
-        print('File uploaded successfully.')
+        print("File uploaded successfully.")
         return response.text
     else:
         return None
+
 
 def upload_heatmap(image_name):
     token = os.getenv("GH_TOKEN")
@@ -362,7 +373,7 @@ def upload_heatmap(image_name):
 
     heatmap_folder = os.getenv("HEATMAP_FOLDER")
     if heatmap_folder is None:
-        raise ValueError("Secret 'HEATMAP_FOLDER' is not set.")
+        heatmap_folder = "heatmap"
 
     remote_path = f"{heatmap_folder}/{image_name}"
     local_path = f"./OUT_FOLDER/{image_name}"
@@ -381,13 +392,14 @@ def upload_heatmap(image_name):
 
     return f"https://fastly.jsdelivr.net/gh/{os.getenv('PICBED')}/{remote_path}"
 
+
 def url_to_md5(url):
     # 创建一个md5哈希对象
     md5_hash = hashlib.md5()
 
     # 对URL进行编码，准备进行哈希处理
     # 默认使用utf-8编码
-    encoded_url = url.encode('utf-8')
+    encoded_url = url.encode("utf-8")
 
     # 更新哈希对象的状态
     md5_hash.update(encoded_url)
@@ -396,6 +408,7 @@ def url_to_md5(url):
     hex_digest = md5_hash.hexdigest()
 
     return hex_digest
+
 
 def download_image(url, save_dir="cover"):
     # 确保目录存在，如果不存在则创建
@@ -420,6 +433,7 @@ def download_image(url, save_dir="cover"):
         print(f"Failed to download image. Status code: {response.status_code}")
     return save_path
 
+
 def upload_cover(url):
     cover_file = download_image(url)
-    return upload_image("cover",f"{cover_file.split('/')[-1]}",cover_file)
+    return upload_image("cover", f"{cover_file.split('/')[-1]}", cover_file)

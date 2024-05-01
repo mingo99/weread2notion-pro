@@ -11,7 +11,7 @@ from utils import (format_date, get_date, get_first_and_last_day_of_month,
                    get_first_and_last_day_of_week,
                    get_first_and_last_day_of_year, get_icon, get_number,
                    get_property_value, get_relation, get_rich_text, get_title,
-                   timestamp_to_date)
+                   get_wolai_icon_url, timestamp_to_date)
 
 load_dotenv()
 TAG_ICON_URL = "https://www.notion.so/icons/tag_gray.svg"
@@ -86,7 +86,6 @@ class NotionHelper:
         if self.read_database_id is None:
             self.create_database()
 
-
     def extract_page_id(self, notion_url):
         # 正则表达式匹配 32 个字符的 Notion page_id
         match = re.search(
@@ -105,9 +104,9 @@ class NotionHelper:
             # 检查子块的类型
 
             if child["type"] == "child_database":
-                self.database_id_dict[
-                    child.get("child_database").get("title")
-                ] = child.get("id")
+                self.database_id_dict[child.get("child_database").get("title")] = (
+                    child.get("id")
+                )
             elif child["type"] == "image" and child.get("image").get("external"):
                 self.image_dict["url"] = child.get("image").get("external").get("url")
                 self.image_dict["id"] = child.get("id")
@@ -166,13 +165,15 @@ class NotionHelper:
             "时长": {"number": {}},
             "时间戳": {"number": {}},
             "日期": {"date": {}},
-            "书籍": {"relation": {
-                "database_id":self.book_database_id,
-                "single_property": {},
-            }},
+            "书籍": {
+                "relation": {
+                    "database_id": self.book_database_id,
+                    "single_property": {},
+                }
+            },
         }
         parent = parent = {"page_id": self.page_id, "type": "page_id"}
-        self.read_database_id=self.client.databases.create(
+        self.read_database_id = self.client.databases.create(
             parent=parent,
             title=title,
             icon=get_icon("https://www.notion.so/icons/target_gray.svg"),
@@ -191,24 +192,30 @@ class NotionHelper:
         week = f"{year}年第{week}周"
         start, end = get_first_and_last_day_of_week(date)
         properties = {"日期": get_date(format_date(start), format_date(end))}
+
+        if start.start_of("year").weekday() != 0:
+            date = start.subtract(days=1)
+        icon_url = get_wolai_icon_url(date.strftime("%Y-%m-%d"), "W")
         return self.get_relation_id(
-            week, self.week_database_id, TARGET_ICON_URL, properties
+            week, self.week_database_id, icon_url, properties
         )
 
     def get_month_relation_id(self, date):
         month = date.strftime("%Y年%-m月")
         start, end = get_first_and_last_day_of_month(date)
         properties = {"日期": get_date(format_date(start), format_date(end))}
+        icon_url = get_wolai_icon_url(start.strftime(("%Y-%m-%d")), "M")
         return self.get_relation_id(
-            month, self.month_database_id, TARGET_ICON_URL, properties
+            month, self.month_database_id, icon_url, properties
         )
 
     def get_year_relation_id(self, date):
         year = date.strftime("%Y")
         start, end = get_first_and_last_day_of_year(date)
         properties = {"日期": get_date(format_date(start), format_date(end))}
+        icon_url = get_wolai_icon_url(start.strftime("%Y-%m-%d"), "Y")
         return self.get_relation_id(
-            year, self.year_database_id, TARGET_ICON_URL, properties
+            year, self.year_database_id, icon_url, properties
         )
 
     def get_day_relation_id(self, date):
@@ -219,6 +226,7 @@ class NotionHelper:
             "日期": get_date(format_date(date)),
             "时间戳": get_number(timestamp),
         }
+        icon_url = get_wolai_icon_url(new_date.strftime("%Y-%m-%d"), "D")
         properties["年"] = get_relation(
             [
                 self.get_year_relation_id(new_date),
@@ -235,7 +243,7 @@ class NotionHelper:
             ]
         )
         return self.get_relation_id(
-            day, self.day_database_id, TARGET_ICON_URL, properties
+            day, self.day_database_id, icon_url, properties
         )
 
     def get_relation_id(self, name, id, icon, properties={}):
@@ -327,20 +335,20 @@ class NotionHelper:
         return self.client.pages.update(page_id=page_id, properties=properties)
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
-    def update_page(self, page_id, properties,cover):
+    def update_page(self, page_id, properties, cover):
         return self.client.pages.update(
-            page_id=page_id, properties=properties,cover=cover
+            page_id=page_id, properties=properties, cover=cover
         )
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def create_page(self, parent, properties, icon):
         return self.client.pages.create(parent=parent, properties=properties, icon=icon)
-    
-
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def create_book_page(self, parent, properties, icon):
-        return self.client.pages.create(parent=parent, properties=properties, icon=icon,cover=icon)
+        return self.client.pages.create(
+            parent=parent, properties=properties, icon=icon, cover=icon
+        )
 
     @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def query(self, **kwargs):
@@ -374,16 +382,25 @@ class NotionHelper:
         for result in results:
             ## 如果没有分组，就跳过(书架中已删除的书籍)
             relation = result.get("properties").get("分组").get("relation")
-                
+
             bookId = get_property_value(result.get("properties").get("BookId"))
             books_dict[bookId] = {
                 "pageId": result.get("id"),
                 "readingTime": get_property_value(
                     result.get("properties").get("rawReadingTime")
                 ),
-                "category": get_property_value(
-                    self.get_relation_name(result.get("properties").get("分组").get("relation")[0].get("id"))
-                ) if relation else None,
+                "category": (
+                    get_property_value(
+                        self.get_relation_name(
+                            result.get("properties")
+                            .get("分组")
+                            .get("relation")[0]
+                            .get("id")
+                        )
+                    )
+                    if relation
+                    else None
+                ),
                 "Sort": get_property_value(result.get("properties").get("Sort")),
                 "douban_url": get_property_value(
                     result.get("properties").get("豆瓣链接")

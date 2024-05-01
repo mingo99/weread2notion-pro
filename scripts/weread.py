@@ -1,10 +1,8 @@
 import argparse
 import os
+
 import requests
-
 from notion_helper import NotionHelper
-from weread_api import WeReadApi
-
 from utils import (
     get_callout,
     get_heading,
@@ -14,6 +12,7 @@ from utils import (
     get_rich_text_from_result,
     get_table_of_contents,
 )
+from weread_api import WeReadApi
 
 
 def get_bookmark_list(page_id, bookId):
@@ -44,7 +43,7 @@ def get_bookmark_list(page_id, bookId):
     return bookmarks
 
 
-def get_review_list(page_id,bookId):
+def get_review_list(page_id, bookId):
     """获取笔记"""
     filter = {
         "and": [
@@ -132,9 +131,11 @@ def sort_notes(page_id, chapter, bookmark_list):
         bookmark_list,
         key=lambda x: (
             x.get("chapterUid", 1),
-            0
-            if (x.get("range", "") == "" or x.get("range").split("-")[0] == "")
-            else int(x.get("range").split("-")[0]),
+            (
+                0
+                if (x.get("range", "") == "" or x.get("range").split("-")[0] == "")
+                else int(x.get("range").split("-")[0])
+            ),
         ),
     )
 
@@ -221,14 +222,14 @@ def append_blocks(id, contents):
 def content_to_block(content):
     if "bookmarkId" in content:
         return get_callout(
-            content.get("markText",""),
+            content.get("markText", ""),
             content.get("style"),
             content.get("colorStyle"),
             content.get("reviewId"),
         )
     elif "reviewId" in content:
         return get_callout(
-            content.get("content",""),
+            content.get("content", ""),
             content.get("style"),
             content.get("colorStyle"),
             content.get("reviewId"),
@@ -258,7 +259,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     options = parser.parse_args()
     branch = os.getenv("REF").split("/")[-1]
-    repository =  os.getenv("REPOSITORY")
+    repository = os.getenv("REPOSITORY")
     weread_api = WeReadApi()
     notion_helper = NotionHelper()
     notion_books = notion_helper.get_all_book()
@@ -277,11 +278,9 @@ if __name__ == "__main__":
             print(f"正在同步《{title}》,一共{len(books)}本，当前是第{index+1}本。")
             chapter = weread_api.get_chapter_info(bookId)
             bookmark_list = get_bookmark_list(pageId, bookId)
-            reviews = get_review_list(pageId,bookId)
+            reviews = get_review_list(pageId, bookId)
             bookmark_list.extend(reviews)
             content = sort_notes(pageId, chapter, bookmark_list)
             append_blocks(pageId, content)
-            properties = {
-                "Sort":get_number(sort)
-            }
-            notion_helper.update_book_page(page_id=pageId,properties=properties)
+            properties = {"Sort": get_number(sort)}
+            notion_helper.update_book_page(page_id=pageId, properties=properties)
