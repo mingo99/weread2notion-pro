@@ -9,11 +9,10 @@ from weread_api import WeReadApi
 
 
 def insert_to_notion(page_id, timestamp, duration):
-    date_str = pendulum.from_timestamp(timestamp, tz=tz).to_date_string()
     date = pendulum.from_timestamp(timestamp, tz=tz)
     parent = {"database_id": notion_helper.day_database_id, "type": "database_id"}
     properties = {
-        "标题": get_title(date_str),
+        "标题": get_title(date.strftime("%Y年%m月%d日")),
         "日期": get_date(
             start=date.format(
                 "YYYY-MM-DD HH:mm:ss"
