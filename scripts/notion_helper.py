@@ -5,6 +5,7 @@ import time
 from datetime import timedelta
 
 import pendulum
+from config import tz
 from dotenv import load_dotenv
 from notion_client import Client
 from retrying import retry
@@ -288,7 +289,7 @@ class NotionHelper:
             "书籍": get_relation([id]),
         }
         if "createTime" in bookmark:
-            create_time = pendulum.from_timestamp(int(bookmark.get("createTime")))
+            create_time = pendulum.from_timestamp(int(bookmark.get("createTime")), tz=tz)
             properties["Date"] = get_date(create_time.to_datetime_string())
             self.get_date_relation(properties, create_time)
         parent = {"database_id": self.bookmark_database_id, "type": "database_id"}
@@ -314,7 +315,7 @@ class NotionHelper:
         if "abstract" in review:
             properties["abstract"] = get_rich_text(review.get("abstract"))
         if "createTime" in review:
-            create_time = pendulum.from_timestamp(int(review.get("createTime")))
+            create_time = pendulum.from_timestamp(int(review.get("createTime")), tz=tz)
             properties["Date"] = get_date(create_time.to_datetime_string())
             self.get_date_relation(properties, create_time)
         parent = {"database_id": self.review_database_id, "type": "database_id"}

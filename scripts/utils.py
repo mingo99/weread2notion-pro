@@ -1,14 +1,10 @@
-import base64
-import calendar
 import hashlib
 import os
 import re
-from datetime import datetime, timedelta
 
 import pendulum
-import requests
 from config import (DATE, FILES, NUMBER, RELATION, RICH_TEXT, SELECT, STATUS,
-                    TITLE, URL)
+                    TITLE, URL, tz)
 from github import Auth, Github
 
 MAX_LENGTH = (
@@ -205,7 +201,7 @@ def get_properties(dict1, dict2):
             property = {
                 "date": {
                     "start": pendulum.from_timestamp(
-                        value, tz="Asia/Shanghai"
+                        value, tz=tz
                     ).to_datetime_string(),
                     "time_zone": "Asia/Shanghai",
                 }
