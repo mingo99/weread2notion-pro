@@ -4,14 +4,12 @@ import re
 import time
 from datetime import timedelta
 
+import pendulum
 from dotenv import load_dotenv
 from notion_client import Client
 from retrying import retry
-from utils import (format_date, get_date, get_first_and_last_day_of_month,
-                   get_first_and_last_day_of_week,
-                   get_first_and_last_day_of_year, get_icon, get_number,
-                   get_property_value, get_relation, get_rich_text, get_title,
-                   get_wolai_icon_url, timestamp_to_date)
+from utils import (get_date, get_icon, get_number, get_property_value,
+                   get_relation, get_rich_text, get_title, get_wolai_icon_url)
 
 load_dotenv()
 TAG_ICON_URL = "https://www.notion.so/icons/tag_gray.svg"
@@ -190,43 +188,51 @@ class NotionHelper:
         year = date.isocalendar().year
         week = date.isocalendar().week
         week = f"{year}年第{week}周"
-        start, end = get_first_and_last_day_of_week(date)
-        properties = {"日期": get_date(format_date(start), format_date(end))}
+        start = date.start_of("week")
+        end = date.end_of("week")
+        properties = {"日期": get_date(start.to_datetime_string(), end.to_datetime_string())}
 
         if start.start_of("year").weekday() != 0:
             date = start.subtract(days=1)
-        icon_url = get_wolai_icon_url(date.strftime("%Y-%m-%d"), "W")
+        icon_url = get_wolai_icon_url(date.to_date_string(), "W")
+
         return self.get_relation_id(
             week, self.week_database_id, icon_url, properties
         )
 
     def get_month_relation_id(self, date):
         month = date.strftime("%Y年%-m月")
-        start, end = get_first_and_last_day_of_month(date)
-        properties = {"日期": get_date(format_date(start), format_date(end))}
-        icon_url = get_wolai_icon_url(start.strftime(("%Y-%m-%d")), "M")
+        start = date.start_of("month")
+        end = date.end_of("month")
+        properties = {"日期": get_date(start.to_datetime_string(), end.to_datetime_string())}
+
+        icon_url = get_wolai_icon_url(start.to_date_string(), "M")
+
         return self.get_relation_id(
             month, self.month_database_id, icon_url, properties
         )
 
     def get_year_relation_id(self, date):
         year = date.strftime("%Y")
-        start, end = get_first_and_last_day_of_year(date)
-        properties = {"日期": get_date(format_date(start), format_date(end))}
-        icon_url = get_wolai_icon_url(start.strftime("%Y-%m-%d"), "Y")
+        start = date.start_of("year")
+        end = date.end_of("year")
+        properties = {"日期": get_date(start.to_datetime_string(), end.to_datetime_string())}
+
+        icon_url = get_wolai_icon_url(start.to_date_string(), "Y")
+
         return self.get_relation_id(
             year, self.year_database_id, icon_url, properties
         )
 
     def get_day_relation_id(self, date):
-        new_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        new_date = date.start_of("day")
         timestamp = (new_date - timedelta(hours=8)).timestamp()
         day = new_date.strftime("%Y年%m月%d日")
         properties = {
-            "日期": get_date(format_date(date)),
+            "日期": get_date(new_date.to_datetime_string()),
             "时间戳": get_number(timestamp),
         }
-        icon_url = get_wolai_icon_url(new_date.strftime("%Y-%m-%d"), "D")
+        icon_url = get_wolai_icon_url(new_date.to_date_string(), "D")
         properties["年"] = get_relation(
             [
                 self.get_year_relation_id(new_date),
@@ -282,8 +288,8 @@ class NotionHelper:
             "书籍": get_relation([id]),
         }
         if "createTime" in bookmark:
-            create_time = timestamp_to_date(int(bookmark.get("createTime")))
-            properties["Date"] = get_date(create_time.strftime("%Y-%m-%d %H:%M:%S"))
+            create_time = pendulum.from_timestamp(int(bookmark.get("createTime")))
+            properties["Date"] = get_date(create_time.to_datetime_string())
             self.get_date_relation(properties, create_time)
         parent = {"database_id": self.bookmark_database_id, "type": "database_id"}
         self.create_page(parent, properties, icon)
@@ -308,8 +314,8 @@ class NotionHelper:
         if "abstract" in review:
             properties["abstract"] = get_rich_text(review.get("abstract"))
         if "createTime" in review:
-            create_time = timestamp_to_date(int(review.get("createTime")))
-            properties["Date"] = get_date(create_time.strftime("%Y-%m-%d %H:%M:%S"))
+            create_time = pendulum.from_timestamp(int(review.get("createTime")))
+            properties["Date"] = get_date(create_time.to_datetime_string())
             self.get_date_relation(properties, create_time)
         parent = {"database_id": self.review_database_id, "type": "database_id"}
         self.create_page(parent, properties, icon)

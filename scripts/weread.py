@@ -3,15 +3,9 @@ import os
 
 import requests
 from notion_helper import NotionHelper
-from utils import (
-    get_callout,
-    get_heading,
-    get_number,
-    get_number_from_result,
-    get_quote,
-    get_rich_text_from_result,
-    get_table_of_contents,
-)
+from utils import (get_callout, get_heading, get_number,
+                   get_number_from_result, get_quote,
+                   get_rich_text_from_result, get_table_of_contents)
 from weread_api import WeReadApi
 
 
@@ -258,8 +252,6 @@ def append_blocks_to_notion(id, blocks, after, contents):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     options = parser.parse_args()
-    branch = os.getenv("REF").split("/")[-1]
-    repository = os.getenv("REPOSITORY")
     weread_api = WeReadApi()
     notion_helper = NotionHelper()
     notion_books = notion_helper.get_all_book()
