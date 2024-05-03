@@ -16,7 +16,6 @@ book_properties_type_dict = {
     "作者": RELATION,
     "Sort": NUMBER,
     "评分": NUMBER,
-    "封面": FILES,
     "分类": RELATION,
     "分组": RELATION,
     "阅读状态": STATUS,

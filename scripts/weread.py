@@ -1,7 +1,5 @@
 import argparse
-import os
 
-import requests
 from notion_helper import NotionHelper
 from utils import (get_callout, get_heading, get_number,
                    get_number_from_result, get_quote,
@@ -92,31 +90,6 @@ def get_sort():
     if len(response.get("results")) == 1:
         return response.get("results")[0].get("properties").get("Sort").get("number")
     return 0
-
-
-def download_image(url, save_dir="cover"):
-    # 确保目录存在，如果不存在则创建
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    # 获取文件名，使用 URL 最后一个 '/' 之后的字符串
-    file_name = url.split("/")[-1] + ".jpg"
-    save_path = os.path.join(save_dir, file_name)
-
-    # 检查文件是否已经存在，如果存在则不进行下载
-    if os.path.exists(save_path):
-        print(f"File {file_name} already exists. Skipping download.")
-        return save_path
-
-    response = requests.get(url, stream=True)
-    if response.status_code == 200:
-        with open(save_path, "wb") as file:
-            for chunk in response.iter_content(chunk_size=128):
-                file.write(chunk)
-        print(f"Image downloaded successfully to {save_path}")
-    else:
-        print(f"Failed to download image. Status code: {response.status_code}")
-    return save_path
 
 
 def sort_notes(page_id, chapter, bookmark_list):
